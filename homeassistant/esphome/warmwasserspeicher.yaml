@@ -53,8 +53,9 @@ sensor:
   - platform: dallas_temp
     address: 0xf74bc78711646128
     name: "Temperatur Warmwasserspeicher Oben"
+    force_update: true
     id: TDHWO
-    update_interval: 60s
+    update_interval: 30s
     on_value:
       then:
         - mqtt.publish:
@@ -67,8 +68,9 @@ sensor:
   - platform: dallas_temp
     address: 0xd56dc98711646128
     name: "Temperatur Warmwasserspeicher Mitte"
+    force_update: true
     id: TDHWM
-    update_interval: 60s
+    update_interval: 30s
     on_value:
       then:
         - mqtt.publish:
@@ -81,8 +83,9 @@ sensor:
   - platform: dallas_temp
     address: 0xd4041670cdc5ff28
     name: "Temperatur Warmwasserspeicher Unten"
+    force_update: true
     id: TDHWU
-    update_interval: 60s
+    update_interval: 30s
     on_value:
       then:
         - mqtt.publish:
@@ -95,11 +98,13 @@ sensor:
   - platform: ds2438
     one_wire_id: dallas_bus
     address: 0x0e000001766f4226
-    update_interval: 60s
+    update_interval: 30s
+    shunt_resistance: 0.1
 
     # Temperatur
     temperature:
       name: "Temperatur Haube Warmwasserspeicher"
+      force_update: true
       unit_of_measurement: "°C"
       accuracy_decimals: 1
       on_value:
@@ -113,6 +118,7 @@ sensor:
     # Spannung 1: VAD (Titanelektrode gegen Gehäuse)
     voltage:
       name: "Korrosionsschutzspannung"
+      force_update: true
       unit_of_measurement: "V"
       accuracy_decimals: 2
       on_value:
@@ -126,6 +132,7 @@ sensor:
     # Spannung 2: VDD (Bus Versorgungsspannung)
     bus_voltage:
       name: "Versorgungsspannung Bus"
+      force_update: true
       unit_of_measurement: "V"
       accuracy_decimals: 2
       on_value:
@@ -136,4 +143,17 @@ sensor:
               retain: true
               qos: 1
 
+    # Strom (durch shunt_resistance)
+    current:
+      name: "Schutzstrom in Kathode"
+      unit_of_measurement: "A"
+      accuracy_decimals: 5
+      on_value:
+        then:
+          - mqtt.publish:
+              topic: "S40C/S/D/W/7I"
+              payload: !lambda 'return str_sprintf("%.5f", x);'
+              retain: true
+              qos: 1
+              
 captive_portal:

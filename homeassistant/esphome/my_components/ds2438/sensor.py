@@ -6,10 +6,13 @@ from esphome.const import (
     CONF_ID,
     CONF_TEMPERATURE,
     CONF_VOLTAGE,
+    CONF_CURRENT,
     UNIT_CELSIUS,
     UNIT_VOLT,
+    UNIT_AMPERE,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_VOLTAGE,
+    DEVICE_CLASS_CURRENT,
     STATE_CLASS_MEASUREMENT,
 )
 
@@ -17,8 +20,8 @@ from esphome.const import (
 ds2438_ns = cg.esphome_ns.namespace('ds2438_custom')
 DS2438Sensor = ds2438_ns.class_('DS2438Sensor', cg.PollingComponent)
 
-# Define the key for the second voltage sensor
-CONF_BUS_VOLTAGE = "bus_voltage"
+CONF_BUS_VOLTAGE = "bus_voltage" # Define the key for the second voltage sensor
+CONF_SHUNT_RESISTANCE = "shunt_resistance" # Shunt-Widerstand in Ohm
 
 # Configuration schema
 CONFIG_SCHEMA = cv.Schema({
@@ -29,6 +32,9 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required('one_wire_id'): cv.use_id(None),
     
     cv.Required(CONF_ADDRESS): cv.hex_uint64_t,
+    
+    # Der Shunt-Widerstand ist essenziell für die Berechnung (Standard z.B. 0.1 Ohm)
+    cv.Optional(CONF_SHUNT_RESISTANCE, default=0.1): cv.positive_float,
     
     # Define the temperature sensor
     cv.Optional(CONF_TEMPERATURE): 
@@ -56,14 +62,23 @@ CONFIG_SCHEMA = cv.Schema({
             device_class=DEVICE_CLASS_VOLTAGE,
             state_class=STATE_CLASS_MEASUREMENT
         ),
+    
+    # Neuer Strom-Sensor
+    cv.Optional(CONF_CURRENT): 
+        sensor.sensor_schema(
+            unit_of_measurement=UNIT_AMPERE, 
+            accuracy_decimals=3,
+            device_class=DEVICE_CLASS_CURRENT,
+            state_class=STATE_CLASS_MEASUREMENT
+        ),
 }).extend(cv.polling_component_schema('60s'))
 
 async def to_code(config):
     # Retrieve the 1-Wire bus variable
     hub = await cg.get_variable(config['one_wire_id'])
-    
+    # Wir übergeben jetzt auch den Widerstandswert an den Konstruktor
     # Create the C++ sensor object
-    var = cg.new_Pvariable(config[CONF_ID], hub, config[CONF_ADDRESS])
+    var = cg.new_Pvariable(config[CONF_ID], hub, config[CONF_ADDRESS], config[CONF_SHUNT_RESISTANCE])
     await cg.register_component(var, config)
     
     # Setup the sub-sensors in C++ if they are in the YAML
@@ -78,3 +93,7 @@ async def to_code(config):
     if CONF_BUS_VOLTAGE in config:
         sens = await sensor.new_sensor(config[CONF_BUS_VOLTAGE])
         cg.add(var.set_bus_voltage_sensor(sens))
+
+    if CONF_CURRENT in config:
+        sens = await sensor.new_sensor(config[CONF_CURRENT])
+        cg.add(var.set_current_sensor(sens))
