@@ -52,7 +52,7 @@ Connect your DS2438 to your ESP board as follows:
 
 ## ⚙️ Configuration
 
-Add the following to your ESPHome YAML configuration file:
+Add the following to your ESPHome YAML configuration file (more comprehensive example "warmwasserspeicher.yaml" in the esphome folder):
 
 ```yaml
 # 1. Define the 1-Wire Bus
@@ -79,18 +79,18 @@ sensor:
 
 **Configuration Parameters**:
 - `address`: The 1-Wire address of your DS2438 (64-bit hex). Find this in the ESPHome logs after first boot.
-- `update_interval`: How often to read the sensor (default: 60s). Increase for slower updates or decrease for more frequent readings.
+- `update_interval`: How often to read the sensor (default: 60s). Decrease to e.g. 30s for more frequent readings if there are points missing in the graph.
 - `one_wire_id`: Must match the ID defined in your 1-Wire bus configuration.
 
 ## 📖 Usage in Home Assistant
 
 Once configured and deployed:
 
-1. The three sensors will appear automatically in Home Assistant
+1. The three sensors of the DS2438 will appear automatically in Home Assistant
 2. Navigate to **Settings → Devices & Services → Entities**
 3. Search for your device name (e.g., "Battery Temperature")
 4. Add them to your dashboards, automations, or scripts
-5. The sensors update at your configured interval (default: 60s)
+5. The sensors update at your configured interval
 
 Example Home Assistant automation:
 ```yaml
@@ -121,7 +121,6 @@ Check the ESPHome logs. If you see `Raw Data: 00 00 ...`, the chip might not be 
 **Device not found on bus**:
 - Verify GPIO pin number in your `one_wire` configuration
 - Check for loose connections or cold solder joints
-- Try increasing the `update_interval` to 30 seconds
 - Enable debug logging in ESPHome to see 1-Wire bus activity
 
 **Compilation Error: `reset_`**: 
@@ -143,13 +142,13 @@ Battery Input Voltage (VAD): 4.15 V
 Bus Supply Voltage (VDD): 3.28 V
 ```
 
-Example tracking of electrode and bus voltage without Home Assistant integration (only via MQTT and InfluxDB)
+Example tracking of electrode and bus voltage without Home Assistant integration (only via MQTT, InfluxDB and Grafana)
 
 ![Voltages imported to Grafana via MQTT](voltages.jpeg)
 
-**Analysis of Current Data during Heating Cycle**: The graph visualizes the electrochemical parameters of a hot water storage tank protected by a titanium impressed current anode. It plots three key metrics over time: the Bus Supply Voltage (VDD), the Anode Potential (VAD) measured against the tank ground, and the Protection Current (I) flowing through the shunt (The shunt has a delibarately low resistance, so as not to impede the corrosion protection. Thus, the current is at the limit of what is directly measurable with the DS2438).
+**Analysis of Current Data during Heating Cycle**: The graph visualizes the electrochemical parameters of a hot water storage tank protected by a titanium impressed current anode. It plots three key metrics over time: the 1-wire Bus Supply Voltage (VDD), the Anode Potential (VAD) measured against the tank ground, and the Protection Current (I) flowing through the shunt (The shunt has a delibarately low resistance, so as not to impede the corrosion protection. Thus, the current is at the limit of what is directly measurable with the DS2438).
 Bus Voltage Stability (VDD): The top line (VDD) remains flat and stable (approx. 3.3V). This confirms that the ESP32 and the sensor power supply are regulated correctly and are unaffected by the load changes during the heating process. It serves as a reliable reference baseline.
-The Heating Event: A distinct event is visible where the water temperature rises (heating phase). This thermal change correlates directly with significant shifts in both the Anode Voltage (VAD) and the Protection Current. Water conductivity increases with temperature. Warmer water lowers the internal electrical resistance between the central titanium anode and the tank wall (cathode). Due to the lowered resistance, the electrochemical cell allows for better ion flow. Depending on the potentiostat's regulation logic, this typically results in an increase in Protection Current (to maintain the potential) or a shift in Anode Voltage (as the voltage drop across the water medium decreases).
+The Heating Event: A distinct event is visible where the water temperature rises (heating phase). This thermal change correlates directly with significant shifts in both the Anode Voltage (VAD) and the Protection Current. Water conductivity increases with temperature. Warmer water lowers the internal electrical resistance between the central titanium anode and the tank wall (cathode). Depending on the potentiostat's regulation logic, this typically results in an increase in Protection Current (to maintain the potential) or a shift in Anode Voltage (as the voltage drop across the water medium decreases).
 
 ## 📝 License
 
