@@ -1,15 +1,24 @@
 # ESPHome-1-wire
 
-Connecting Maxim's 1-wire devices like DS2438 via ESPHome to Home Assistant.
+Connecting Maxim's 1-wire devices like **DS2438**, **DS2408**, and **DS2423** via ESPHome to Home Assistant.
 
-A robust custom component for **ESPHome** to read temperature, input voltage (VAD), and supply voltage (VDD) from the **Maxim DS2438 Smart Battery Monitor** via the 1-Wire bus.
+A robust collection of custom components for **ESPHome** to read temperature, voltages, currents, counters, and control digital I/O via the 1-Wire bus.
 
-## 🚀 Key Features
-
+### 🔋 DS2438 (Smart Battery Monitor)
 * **Fully Compatible with ESPHome 2025.12+**: Resolves Python class path issues and protected member access (`reset_`) introduced in recent ESPHome updates.
-* **Dual Voltage Support**: Measures both **Input Voltage (VAD)** and **Bus Voltage (VDD)** by dynamically reconfiguring the chip's control register.
+* **Dual Voltage Support**: Measures both **Input Voltage (VAD)** and **Bus Voltage (VDD)** by dynamically reconfiguring the chip's control register (0x4E Write Scratchpad).
+* **Current Sensing**: Supports current measurement via shunt resistor (IAD), automatically calculating amperage based on the configured shunt resistance.
 * **Reliable Data**: Implements the "Recall Memory" sequence to fetch fresh data from internal latches.
-* **Stable Timing**: Includes appropriate delays for A/D conversion.
+
+### 🔌 DS2408 (8-Channel Addressable Switch)
+* **8 Digital I/O Channels**: Read input states or control outputs via Home Assistant.
+* **Binary Sensor Integration**: Maps PIO pins to ESPHome binary sensors.
+* **Efficient Polling**: Reads all channels in a single transaction using `Read PIO Registers`.
+
+### 🔢 DS2423 (Dual 32-bit Counter)
+* **Dual Counters**: Supports both Counter A and Counter B inputs.
+* **Battery Backed**: Reads from non-volatile memory pages (0x01C0 / 0x01E0).
+* **High Precision**: 32-bit resolution for rain gauges, anemometers, or energy meters.
 
 ## 📋 Prerequisites
 
@@ -23,8 +32,8 @@ Before using this component, ensure you have:
 
 ## 🛠 Installation
 1.  Create a folder named `my_components` in your ESPHome configuration directory (if it doesn't exist).
-2.  Create a subfolder `ds2438`.
-3.  Copy `sensor.py` and `ds2438.h` into `/config/esphome/my_components/ds2438/`.
+2.  Create subfolders `ds2438`, `ds2408`, and `ds2423` inside `my_components` as needed.
+3.  Copy the respective component files (`.h`, `sensor.py` / `binary_sensor.py`, `__init__.py`) into their folders.
 
 Directory structure:
 ```text
@@ -34,6 +43,8 @@ Directory structure:
 │       ├── __init__.py
 │       ├── sensor.py
 │       └── ds2438.h
+│   └── ds2408/ ...
+│   └── ds2423/ ...
 └── your_device.yaml
 ```
 
@@ -41,12 +52,25 @@ Directory structure:
 
 Connect your DS2438 to your ESP board as follows:
 
+### DS2438
 | DS2438 Pin | ESP Pin | Notes |
 |-----------|---------|-------|
 | DQ (1)    | GPIO4   | Data line (1-Wire bus) with 4.7kΩ pull-up to VDD |
 | GND (2)   | GND     | Ground |
-| VDD (3)   | 3.3V    | Power supply (can use parasitic power from DQ if needed) |
-| VAD (4)   | N/A     | Connect external sensor/battery |
+| VDD (3)   | 3.3V    | Power supply |
+| VAD (4)   | Sensor  | Analog Input (0-10V) |
+| IAD/ISENS | Shunt   | Current Sense Inputs |
+
+### DS2408
+| DS2408 Pin | Note |
+|------------|------|
+| P0-P7      | Digital I/O |
+| RSTZ       | Reset Input |
+
+### DS2423
+| DS2423 Pin | Note |
+|------------|------|
+| A/B        | Counter Inputs |
 
 **Finding your DS2438 address**: After configuration, check your ESPHome logs during the first boot to find your device's 1-Wire address. You can also use ESPHome's 1-Wire component debug mode to scan for devices.
 
@@ -61,12 +85,13 @@ one_wire:
     pin: GPIO4
     id: one_wire_bus
 
-# 2. Add the Custom Sensor
+# 2. DS2438 Sensor
 sensor:
   - platform: ds2438
     one_wire_id: one_wire_bus
     address: 0xd56dc98711646128
     update_interval: 60s
+    shunt_resistance: 0.1 # resistance in Ohms
     temperature:
       name: "Battery Temperature"
     voltage:
@@ -75,12 +100,36 @@ sensor:
     bus_voltage:
       name: "Bus Supply Voltage (VDD)"
       unit_of_measurement: "V"
+    current:
+      name: "Battery Current"
+      unit_of_measurement: "A"
+
+# 3. DS2408 Binary Sensor
+binary_sensor:
+  - platform: ds2408
+    one_wire_id: one_wire_bus
+    address: 0x2900000000000000
+    channels:
+      - pin: 0
+        name: "Motion Sensor"
+      - pin: 1
+        name: "Door Sensor"
+
+# 4. DS2423 Counter
+sensor:
+  - platform: ds2423
+    one_wire_id: one_wire_bus
+    address: 0x1D00000000000000
+    counter_a:
+      name: "Rain Gauge"
+    counter_b:
+      name: "Anemometer"
 ```
 
 **Configuration Parameters**:
-- `address`: The 1-Wire address of your DS2438 (64-bit hex). Find this in the ESPHome logs after first boot.
-- `update_interval`: How often to read the sensor (default: 60s). Decrease to e.g. 30s for more frequent readings if there are points missing in the graph.
-- `one_wire_id`: Must match the ID defined in your 1-Wire bus configuration.
+- `shunt_resistance` (DS2438): Resistor value for current calculation (default: 0.1 Ohm).
+- `channels` (DS2408): List of pins (0-7) to map to binary sensors.
+- `counter_a` / `counter_b` (DS2423): Specific configuration for the two counters.
 
 ## 📖 Usage in Home Assistant
 
@@ -107,7 +156,14 @@ automation:
 
 ## 🔧 Technical Details
 
-The DS2438 shares a single A/D converter for both voltage inputs. This component handles the switching logic automatically, measuring VAD, waiting for conversion, and continuing with VDD.
+### DS2438
+The DS2438 shares a single A/D converter for both voltage inputs. This component handles the switching logic automatically, measuring VAD, waiting for conversion, and continuing with VDD (Control Register 0x4E). Resistor voltage (current) is measured by enabling the IAD bit.
+
+### DS2408
+Communicates via Command 0xF0 (Read PIO Registers). The state of all 8 pins is read in one go.
+
+### DS2423
+Counters are stored in memory pages 14 (Counter A) and 15 (Counter B). Data is retrieved by "Read Memory & Counter" commands.
 
 ## 🐛 Troubleshooting
 
