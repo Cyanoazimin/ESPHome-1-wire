@@ -1,0 +1,83 @@
+esphome:
+  name: ds2423-counter
+  friendly_name: ESP32 DS2423 Counter
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Use local custom components
+external_components:
+  - source:
+      type: local
+      path: my_components
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret haapi_password
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 15min
+  ap:
+    ssid: "DS2423 Counter Fallback"
+    password: !secret ap_password
+
+mqtt:
+  broker: 192.168.178.91
+  port: 1883
+  username: !secret "mqtt_username"
+  password: !secret "mqtt_password"
+  discovery: false
+
+# 1-Wire BUS an GPIO 4
+one_wire:
+  - platform: gpio
+    pin: GPIO4
+    id: onewire_bus
+
+sensor:
+  # Custom DS2423 Counter Sensor
+  - platform: ds2423
+    one_wire_id: onewire_bus
+    # TODO: Replace with the actual 64-bit address of your DS2423 device
+    address: 0x000000000000001D 
+    update_interval: 30s
+
+    # Counter A (e.g., for a rain gauge)
+    counter_a:
+      name: "Zähler Regenwippe"
+      force_update: true
+      on_value:
+        then:
+          - mqtt.publish:
+              # TODO: Replace with the correct MQTT topic
+              topic: "S40C/I/F/M/RA"
+              payload: !lambda 'return str_sprintf("%.0f", x);'
+              retain: true
+              qos: 1
+
+    # Counter B (e.g., for an anemometer)
+    counter_b:
+      name: "Zähler Anemometer"
+      force_update: true
+      on_value:
+        then:
+          - mqtt.publish:
+              # TODO: Replace with the correct MQTT topic
+              topic: "S40C/I/F/M/AA"
+              payload: !lambda 'return str_sprintf("%.0f", x);'
+              retain: true
+              qos: 1
+              
+captive_portal:
