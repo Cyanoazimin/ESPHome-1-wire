@@ -210,6 +210,18 @@ Tracking this temperature dependency allows for alarms, when the corrosion inhib
 
 ![Power imported to Grafana via MQTT](DS2438power.jpeg)
 
+### Corrosion Protection Monitoring
+**The Problem:** The electrical conductivity of water increases with temperature, causing the protection current (and thus power) to rise as the water heats up. This makes it difficult to detect failures (like a disconnected cable) just by looking at a static threshold, because the "normal" power at 20°C might be close to 0, while at 60°C it should be much higher.
+
+**The Solution:** By analyzing data points (Temperature vs. Power), we established a linear regression model for the specific Titanium Electrode setup:
+> **P µW⁻¹ ≈ 0.97 T °C⁻¹ - 27.3**
+
+An ESPHome `binary_sensor` now continuously compares the **actual measured power** ($V_{AD} \cdot I_{AD}$) against this **expected power**. If the difference exceeds a safety threshold (e.g., 10 µW) for more than a minute, an alarm is triggered. This reliably detects:
+*   **Cable breaks / Potentiostat failure**: Power drops to 0, deviation becomes high.
+*   **Electrode degradation**: Power drifts significantly from the expected curve.
+
+See `warmwasserspeicher.yaml` for the implementation using lambda functions.
+
 ## 📝 License
 
 This project is released under the **MIT License**. You are free to use, modify, and distribute this code, provided that you include the original license notice in any distribution.

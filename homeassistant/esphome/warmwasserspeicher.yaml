@@ -117,6 +117,7 @@ sensor:
 
     # Spannung 1: VAD (Titanelektrode gegen Gehäuse)
     voltage:
+      id: vad_voltage
       name: "Korrosionsschutzspannung"
       force_update: true
       unit_of_measurement: "V"
@@ -145,6 +146,7 @@ sensor:
 
     # Strom (durch shunt_resistance)
     current:
+      id: iad_current
       name: "Schutzstrom in Kathode"
       unit_of_measurement: "A"
       accuracy_decimals: 5
@@ -156,4 +158,40 @@ sensor:
               retain: true
               qos: 1
               
-captive_portal:
+binary_sensor:
+  - platform: template
+    name: "Korrosionsschutz Alarm"
+    id: corrosion_alarm
+    lambda: |-
+      // Constants from Linear Regression (P = m*T + c)
+      // m = 0.9735, c = -27.34
+      const float m = 0.9735;
+      const float c = -27.34;
+      
+      // Get current values
+      // Temp is in TDHWO (Top of tank), usually the hottest and most relevant for the anode head
+      if (!id(TDHWO).has_state() || !id(vad_voltage).has_state() || !id(iad_current).has_state()) {
+        return false;
+      }
+
+      float t = id(TDHWO).state; 
+      float v = id(vad_voltage).state; 
+      float i = id(iad_current).state; 
+      
+      // Calculate Actual Power in µW (V * A * 1e6)
+      float p_actual = v * i * 1000000.0;
+      
+      // Calculate Expected Power in µW
+      float p_expected = (m * t) + c;
+      if (p_expected < 0) p_expected = 0; // Clamp negative values at low temps
+      
+      // Calculate Deviation
+      float deviation = abs(p_actual - p_expected);
+      
+      // Threshold: 10 µW
+      // Triggers if deviation is too high (e.g. cable break -> 0 µW vs expected 16 µW)
+      return deviation > 10.0;
+    filters:
+      - delayed_on: 1min # Prevent false alarms during reading fluctuations
+
+ captive_portal:
