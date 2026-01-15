@@ -208,13 +208,13 @@ The Heating Event: A distinct event is visible where the water temperature rises
 
 Tracking this temperature dependency allows for alarms, when the corrosion inhibition device is not functional any more. Looking at the power (voltage x current) consumed, the dependency becomes even more apparent:
 
-![Power imported to Grafana via MQTT](Warmwasserspeicher%20DS2438%20Power%20vs%20Temperature%20square.png)
+![Power imported to Grafana via MQTT](DS2438power.jpeg)
 
 ### Corrosion Protection Monitoring
 **The Problem:** The electrical conductivity of water increases with temperature, causing the protection current (and thus power) to rise as the water heats up. This makes it difficult to detect failures (like a disconnected cable) just by looking at a static threshold, because the "normal" power at 20°C might be close to 0, while at 60°C it should be much higher.
 
 **The Solution:** By analyzing data points (Temperature vs. Power), we established a quadratic regression model for the specific Titanium Electrode setup:
-> **P µW⁻¹ ≈ 0.052 T² - 3.2 T + 55.8 (T in °C)**
+> **P µW⁻¹ ≈ 0.052 T² °C⁻² - 3.2 T °C⁻¹ + 55.8**
 
 An ESPHome `binary_sensor` now continuously compares the **actual measured power** ($V_{AD} \cdot I_{AD}$) against this **expected power**. If the difference exceeds a safety threshold (e.g., 10 µW) for more than **12 hours**, an alarm is triggered. This reliably detects:
 *   **Cable breaks / Potentiostat failure**: Power drops to 0, deviation becomes high.
