@@ -206,7 +206,7 @@ Example tracking of electrode and bus voltage without Home Assistant integration
 Bus Voltage Stability (VDD): The top line (VDD) remains flat and stable (approx. 3.3V). This confirms that the ESP32 and the sensor power supply are regulated correctly and are unaffected by the load changes during the heating process. It serves as a reliable reference baseline.
 The Heating Event: A distinct event is visible where the water temperature rises (heating phase). This thermal change correlates directly with significant shifts in both the Anode Voltage (VAD) and the Protection Current. Water conductivity increases with temperature. Warmer water lowers the internal electrical resistance between the central titanium anode and the tank wall (cathode). Depending on the potentiostat's regulation logic, this typically results in an increase in Protection Current (to maintain the potential) or a shift in Anode Voltage (as the voltage drop across the water medium decreases).
 
-Looking at the power (voltage x current) consumed, the dependency becomes even more apparent:
+Tracking this temperature dependency allows for alarms, when the corrosion inhibition device is not functional any more. Looking at the power (voltage x current) consumed, the dependency becomes even more apparent:
 
 ![Power imported to Grafana via MQTT](DS2438power.jpeg)
 
