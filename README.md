@@ -200,7 +200,7 @@ Bus Supply Voltage (VDD): 3.28 V
 
 Example tracking of electrode and bus voltage without Home Assistant integration (only via MQTT, InfluxDB and Grafana)
 
-![Voltages imported to Grafana via MQTT](DS2438 voltages.jpeg)
+![Voltages imported to Grafana via MQTT](DS2438voltages.jpeg)
 
 **Analysis of Current Data during Heating Cycle**: The graph visualizes the electrochemical parameters of a hot water storage tank protected by a titanium impressed current anode. It plots three key metrics over time: the 1-wire Bus Supply Voltage (VDD), the Anode Potential (VAD) measured against the tank ground, and the Protection Current (I) flowing through the shunt (The shunt has a delibarately low resistance, so as not to impede the corrosion protection. Thus, the current is at the limit of what is directly measurable with the DS2438).
 Bus Voltage Stability (VDD): The top line (VDD) remains flat and stable (approx. 3.3V). This confirms that the ESP32 and the sensor power supply are regulated correctly and are unaffected by the load changes during the heating process. It serves as a reliable reference baseline.
@@ -208,7 +208,7 @@ The Heating Event: A distinct event is visible where the water temperature rises
 
 Looking at the power (voltage x current) consumed, the dependency becomes even more apparent:
 
-![Power imported to Grafana via MQTT](DS2438 Power.jpeg)
+![Power imported to Grafana via MQTT](DS2438power.jpeg)
 
 ## 📝 License
 
