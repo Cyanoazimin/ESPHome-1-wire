@@ -163,13 +163,13 @@ binary_sensor:
     name: "Korrosionsschutz Alarm"
     id: corrosion_alarm
     lambda: |-
-      // Constants from Linear Regression (P = m*T + c)
-      // m = 0.9735, c = -27.34
-      const float m = 0.9735;
-      const float c = -27.34;
+      // Quadratic Regression Model (P = a*T^2 + b*T + c)
+      // a = 0.0518, b = -3.204, c = 55.81
+      const float a = 0.0518;
+      const float b = -3.204;
+      const float c = 55.81;
       
       // Get current values
-      // Temp is in TDHWO (Top of tank), usually the hottest and most relevant for the anode head
       if (!id(TDHWO).has_state() || !id(vad_voltage).has_state() || !id(iad_current).has_state()) {
         return false;
       }
@@ -182,16 +182,15 @@ binary_sensor:
       float p_actual = v * i * 1000000.0;
       
       // Calculate Expected Power in µW
-      float p_expected = (m * t) + c;
+      float p_expected = (a * t * t) + (b * t) + c;
       if (p_expected < 0) p_expected = 0; // Clamp negative values at low temps
       
       // Calculate Deviation
       float deviation = abs(p_actual - p_expected);
       
       // Threshold: 10 µW
-      // Triggers if deviation is too high (e.g. cable break -> 0 µW vs expected 16 µW)
       return deviation > 10.0;
     filters:
-      - delayed_on: 1min # Prevent false alarms during reading fluctuations
+      - delayed_on: 12h # Prevent false alarms, reaction time for corrosion is slow
 
  captive_portal:
