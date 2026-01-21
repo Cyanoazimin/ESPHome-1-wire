@@ -101,6 +101,14 @@ sensor:
 
   # Custom DS2438 Sensor
   - platform: ds2438
+  
+  # Beispiel für einen Sensor am neuen Bus (GPIO 18)
+  # - platform: dallas_temp
+  #   one_wire_id: dallas_bus_2
+  #   address: 0x1234567890abcdef # <-- Hier Adresse eintragen
+  #   name: "Neuer Sensor am Bus 2"
+  #   update_interval: 60s
+
     one_wire_id: dallas_bus
     address: 0x0e000001766f4226
     update_interval: 30s
